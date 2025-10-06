@@ -86,7 +86,7 @@
 
             <!-- 滚动提示 -->
             <div class="scroll-indicator">
-                <p>下滑开始使用云盘功能</p>
+                <p>网站开源地址：https://github.com/cqycqy-cn/MyEasyWebCloudDisk</p>
                 <i>⬇️</i>
             </div>
 
@@ -364,4 +364,5 @@
         }
     </script>
 </body>
+
 </html>
