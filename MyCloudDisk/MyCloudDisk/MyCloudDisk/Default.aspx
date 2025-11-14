@@ -1,7 +1,7 @@
 <%@ Page Language="C#" AutoEventWireup="true" CodeFile="Default.aspx.cs" Inherits="_Default" %>
 
 <!DOCTYPE html>
-<html xmlns="https://www.w3.org/1999/xhtml">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
     <meta charset="utf-8" />
     <title>安全云盘 - 上传文件</title>
@@ -66,7 +66,7 @@
                         <h6>⚠️ 重要提醒</h6>
                         <ul>
                             <li>请妥善保管您的文件夹名称和访问密码</li>
-                            <li>如果您忘记密码，我们将<strong>无法为您恢复<strong> 文件访问权限</li>
+                            <li>如果您忘记密码，我们将无法为您恢复文件访问权限</li>
                             <li>系统会自动清理30分钟前的临时文件</li>
                             <li>禁止上传违法、侵权或恶意软件等内容</li>
                         </ul>
@@ -76,7 +76,7 @@
                         <h6>🔧 技术特性</h6>
                         <ul>
                             <li>加密算法：AES-256-CBC</li>
-                            <li>密钥派生：PBKDF2 加盐并进行 1.5w 次加密函数迭代</li>
+                            <li>密钥派生：PBKDF2 with 15,000 iterations</li>
                             <li>安全传输：HTTPS/TLS 1.2+</li>
                             <li>文件索引：加密存储，防止文件名泄露</li>
                         </ul>
@@ -86,7 +86,7 @@
 
             <!-- 滚动提示 -->
             <div class="scroll-indicator">
-                <p>网站开源地址：https://github.com/cqycqy-cn/MyEasyWebCloudDisk</p>
+                <p>下滑开始使用云盘功能</p>
                 <i>⬇️</i>
             </div>
 
@@ -182,8 +182,8 @@
                 <div class="form-group">
                     <label for="txtRegCode">注册码：</label>
                     <asp:TextBox ID="txtRegCode" runat="server" CssClass="form-control" 
-                        placeholder="输入注册码" MaxLength="9"></asp:TextBox>
-                    <small class="form-text text-muted">注册码格式：就不告诉你Qwq</small>
+                        placeholder="输入3位大写字母+6位数字注册码（如：ABC123456）" MaxLength="9"></asp:TextBox>
+                    <small class="form-text text-muted">注册码格式：3位大写字母 + 6位数字</small>
                 </div>
                 
                 <div class="form-group">

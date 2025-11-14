@@ -3,7 +3,7 @@
     Namespace="System.Web.UI" TagPrefix="asp" %>
 
 <!DOCTYPE html>
-<html xmlns="https://www.w3.org/1999/xhtml">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
     <meta charset="utf-8" />
     <title>安全云盘 - 下载文件</title>
@@ -19,93 +19,6 @@
         .group-section { border: 2px solid #28a745; border-radius: 10px; padding: 20px; margin-top: 20px; background-color: #f8fff9; }
         .personal-section { border: 2px solid #007bff; border-radius: 10px; padding: 20px; margin-top: 20px; background-color: #f0f8ff; }
     </style>
-    
-    <!-- 新增下载处理脚本 -->
-    <script type="text/javascript">
-        function handleDownload(encryptedFileName, originalFileName, isGroup) {
-            var folderName, password;
-            
-            if (isGroup) {
-                folderName = document.getElementById('<%= txtGroupName.ClientID %>').value;
-                password = document.getElementById('<%= txtGroupAdminPassword.ClientID %>').value;
-            } else {
-                folderName = document.getElementById('<%= txtFolderName.ClientID %>').value;
-                password = document.getElementById('<%= txtPassword.ClientID %>').value;
-            }
-            
-            if (!folderName || !password) {
-                alert('请先访问文件夹并确保已输入密码');
-                return false;
-            }
-            
-            if (!confirm('确定要下载这个文件吗？')) {
-                return false;
-            }
-            
-            // 创建隐藏表单进行提交
-            var form = document.createElement('form');
-            form.method = 'post';
-            form.action = 'Download.aspx';
-            
-            // 添加参数
-            function addInput(name, value) {
-                var input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = name;
-                input.value = value;
-                form.appendChild(input);
-            }
-            
-            addInput('downloadType', isGroup ? 'group' : 'personal');
-            addInput('folderName', folderName);
-            addInput('password', password);
-            addInput('encryptedFileName', encryptedFileName);
-            addInput('originalFileName', originalFileName);
-            
-            document.body.appendChild(form);
-            form.submit();
-            document.body.removeChild(form);
-            
-            return false;
-        }
-        
-        function handleGroupAllDownload() {
-            var groupName = document.getElementById('<%= txtGroupName.ClientID %>').value;
-            var adminPassword = document.getElementById('<%= txtGroupAdminPassword.ClientID %>').value;
-            
-            if (!groupName || !adminPassword) {
-                alert('请先访问群组并确保已输入管理密码');
-                return false;
-            }
-            
-            if (!confirm('确定要打包下载所有文件吗？')) {
-                return false;
-            }
-            
-            // 创建隐藏表单进行提交
-            var form = document.createElement('form');
-            form.method = 'post';
-            form.action = 'Download.aspx';
-            
-            function addInput(name, value) {
-                var input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = name;
-                input.value = value;
-                form.appendChild(input);
-            }
-            
-            addInput('downloadType', 'groupall');
-            addInput('groupName', groupName);
-            addInput('adminPassword', adminPassword);
-            
-            document.body.appendChild(form);
-            form.submit();
-            document.body.removeChild(form);
-            
-            return false;
-        }
-    </script>
 </head>
 <body>
     <form id="form1" runat="server">
@@ -166,8 +79,10 @@
                                                 <span><%# Eval("Value") %></span>
                                                 <div class="btn-group">
                                                     <asp:LinkButton ID="btnDownload" runat="server" 
-                                                        OnClientClick='<%# "return handleDownload(\"" + Eval("Key") + "\", \"" + Eval("Value") + "\", false)" %>'
-                                                        CssClass="btn btn-sm btn-outline-success">
+                                                        CommandName="Download" 
+                                                        CommandArgument='<%# Eval("Key") + "|" + Eval("Value") %>'
+                                                        CssClass="btn btn-sm btn-outline-success"
+                                                        OnClientClick="return confirm('确定要下载这个文件吗？');">
                                                         下载
                                                     </asp:LinkButton>
                                                     <asp:LinkButton ID="btnDelete" runat="server" 
@@ -215,7 +130,7 @@
                                         <h5 class="mb-0">群组管理</h5>
                                         <div class="btn-group">
                                             <asp:Button ID="btnDownloadAllGroup" runat="server" Text="打包下载全部" 
-                                                CssClass="btn btn-warning" OnClientClick="return handleGroupAllDownload()" />
+                                                CssClass="btn btn-warning" OnClick="btnDownloadAllGroup_Click" />
                                             <asp:Button ID="btnDeleteGroup" runat="server" Text="删除群组" 
                                                 CssClass="btn btn-danger" OnClick="btnDeleteGroup_Click"
                                                 OnClientClick="return confirm('⚠️ 警告：这将永久删除整个群组及其所有文件！\n\n此操作不可恢复！\n\n确定要删除整个群组吗？');" />
@@ -233,8 +148,10 @@
                                                 <span><%# Eval("Value") %></span>
                                                 <div class="btn-group">
                                                     <asp:LinkButton ID="btnDownloadGroup" runat="server" 
-                                                        OnClientClick='<%# "return handleDownload(\"" + Eval("Key") + "\", \"" + Eval("Value") + "\", true)" %>'
-                                                        CssClass="btn btn-sm btn-outline-success">
+                                                        CommandName="Download" 
+                                                        CommandArgument='<%# Eval("Key") + "|" + Eval("Value") %>'
+                                                        CssClass="btn btn-sm btn-outline-success"
+                                                        OnClientClick="return confirm('确定要下载这个文件吗？');">
                                                         下载
                                                     </asp:LinkButton>
                                                     <asp:LinkButton ID="btnDeleteGroupFile" runat="server" 

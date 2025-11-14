@@ -8,31 +8,6 @@ public partial class _Default : Page
     {
         // 清理过期的频率限制记录
         RateLimitHelper.CleanupOldRecords();
-        
-        // 显示重定向带来的消息
-        if (!IsPostBack)
-        {
-            if (!string.IsNullOrEmpty(Request.QueryString["message"]))
-            {
-                lblMessage.Visible = true;
-                lblMessage.Text = Server.UrlDecode(Request.QueryString["message"]);
-                lblMessage.CssClass = "alert alert-success";
-            }
-            
-            if (!string.IsNullOrEmpty(Request.QueryString["groupMessage"]))
-            {
-                lblGroupUploadMessage.Visible = true;
-                lblGroupUploadMessage.Text = Server.UrlDecode(Request.QueryString["groupMessage"]);
-                lblGroupUploadMessage.CssClass = "alert alert-success";
-            }
-            
-            if (!string.IsNullOrEmpty(Request.QueryString["createMessage"]))
-            {
-                lblCreateGroupMessage.Visible = true;
-                lblCreateGroupMessage.Text = Server.UrlDecode(Request.QueryString["createMessage"]);
-                lblCreateGroupMessage.CssClass = "alert alert-success";
-            }
-        }
     }
 
     // 个人云盘上传相关方法
@@ -45,17 +20,14 @@ public partial class _Default : Page
         {
             var result = FileManager.CreateFolderAndUpload(folderName, password, Request.Files);
             
+            lblMessage.Visible = true;
+            lblMessage.Text = result.Message;
+            lblMessage.CssClass = result.Success ? "alert alert-success" : "alert alert-danger";
+            
             if (result.Success)
             {
-                // 修复：上传成功后重定向，避免刷新重复提交
-                Response.Redirect("Default.aspx?message=" + Server.UrlEncode(result.Message));
-                return;
-            }
-            else
-            {
-                lblMessage.Visible = true;
-                lblMessage.Text = result.Message;
-                lblMessage.CssClass = "alert alert-danger";
+                txtFolderName.Text = "";
+                txtPassword.Text = "";
             }
         }
         else
@@ -76,17 +48,14 @@ public partial class _Default : Page
         {
             var result = GroupFileManager.UploadToGroup(groupName, uploadPassword, Request.Files);
             
+            lblGroupUploadMessage.Visible = true;
+            lblGroupUploadMessage.Text = result.Message;
+            lblGroupUploadMessage.CssClass = result.Success ? "alert alert-success" : "alert alert-danger";
+            
             if (result.Success)
             {
-                // 修复：上传成功后重定向
-                Response.Redirect("Default.aspx?groupMessage=" + Server.UrlEncode(result.Message));
-                return;
-            }
-            else
-            {
-                lblGroupUploadMessage.Visible = true;
-                lblGroupUploadMessage.Text = result.Message;
-                lblGroupUploadMessage.CssClass = "alert alert-danger";
+                txtGroupNameUpload.Text = "";
+                txtGroupUploadPassword.Text = "";
             }
         }
         else
@@ -133,15 +102,15 @@ public partial class _Default : Page
         // 创建群组
         var result = GroupFileManager.CreateGroup(groupName, publicPassword, adminPassword, regCode);
         
+        ShowCreateGroupMessage(result.Message, result.Success);
+        
         if (result.Success)
         {
-            // 修复：创建成功后重定向
-            Response.Redirect("Default.aspx?createMessage=" + Server.UrlEncode(result.Message));
-            return;
-        }
-        else
-        {
-            ShowCreateGroupMessage(result.Message, false);
+            // 清空表单
+            txtRegCode.Text = "";
+            txtNewGroupName.Text = "";
+            txtGroupPublicPassword.Text = "";
+            txtGroupAdminPassword.Text = "";
         }
     }
 

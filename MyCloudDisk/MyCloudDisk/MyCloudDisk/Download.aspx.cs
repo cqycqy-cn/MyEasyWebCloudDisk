@@ -3,20 +3,11 @@ using System.Collections.Generic;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using System.Threading;
-using System.IO;
 
 public partial class Download : Page
 {
     protected void Page_Load(object sender, EventArgs e)
     {
-        // 首先检查是否是下载请求
-        if (IsDownloadRequest())
-        {
-            ProcessDownloadRequest();
-            return; // 重要：处理下载后立即返回
-        }
-
         if (!IsPostBack)
         {
             // 默认显示个人云盘模式
@@ -24,143 +15,7 @@ public partial class Download : Page
         }
     }
 
-    // 检查是否是下载请求
-    private bool IsDownloadRequest()
-    {
-        return !string.IsNullOrEmpty(Request.Form["downloadType"]);
-    }
-
-    // 处理下载请求
-    private void ProcessDownloadRequest()
-    {
-        string downloadType = Request.Form["downloadType"];
-        
-        switch (downloadType)
-        {
-            case "personal":
-                HandlePersonalFileDownload();
-                break;
-            case "group":
-                HandleGroupFileDownload();
-                break;
-            case "groupall":
-                HandleGroupAllDownload();
-                break;
-        }
-    }
-
-    private void HandlePersonalFileDownload()
-    {
-        string folderName = Request.Form["folderName"];
-        string password = Request.Form["password"];
-        string encryptedFileName = Request.Form["encryptedFileName"];
-        string originalFileName = Request.Form["originalFileName"];
-
-        if (string.IsNullOrEmpty(folderName) || string.IsNullOrEmpty(password) ||
-            string.IsNullOrEmpty(encryptedFileName) || string.IsNullOrEmpty(originalFileName))
-        {
-            return;
-        }
-
-        var result = FileManager.PrepareFileDownload(folderName, password, encryptedFileName, originalFileName);
-        
-        if (result.Success)
-        {
-            DeliverFile(result.TempFilePath, originalFileName, "application/octet-stream");
-        }
-    }
-
-    private void HandleGroupFileDownload()
-    {
-        string groupName = Request.Form["groupName"];
-        string adminPassword = Request.Form["adminPassword"];
-        string encryptedFileName = Request.Form["encryptedFileName"];
-        string originalFileName = Request.Form["originalFileName"];
-
-        if (string.IsNullOrEmpty(groupName) || string.IsNullOrEmpty(adminPassword) ||
-            string.IsNullOrEmpty(encryptedFileName) || string.IsNullOrEmpty(originalFileName))
-        {
-            return;
-        }
-
-        var result = GroupFileManager.PrepareGroupFileDownload(groupName, adminPassword, encryptedFileName, originalFileName);
-        
-        if (result.Success)
-        {
-            DeliverFile(result.TempFilePath, originalFileName, "application/octet-stream");
-        }
-    }
-
-    private void HandleGroupAllDownload()
-    {
-        string groupName = Request.Form["groupName"];
-        string adminPassword = Request.Form["adminPassword"];
-
-        if (string.IsNullOrEmpty(groupName) || string.IsNullOrEmpty(adminPassword))
-        {
-            return;
-        }
-
-        var result = GroupFileManager.PrepareGroupAllFilesDownload(groupName, adminPassword);
-        
-        if (result.Success)
-        {
-            string zipFileName = string.Format("{0}_{1:yyyyMMdd_HHmmss}.zip", groupName, DateTime.Now);
-            DeliverFile(result.TempFilePath, zipFileName, "application/zip");
-        }
-    }
-
-    // 统一的文件传输方法
-    private void DeliverFile(string filePath, string fileName, string contentType)
-    {
-        try
-        {
-            if (!File.Exists(filePath))
-            {
-                LogHelper.Log("文件不存在: " + filePath);
-                return;
-            }
-
-            LogHelper.Log("开始传输文件到浏览器: " + fileName);
-            
-            // 清除所有输出
-            Response.Clear();
-            Response.ClearHeaders();
-            Response.ClearContent();
-            
-            // 设置响应头
-            Response.ContentType = contentType;
-            Response.AppendHeader("Content-Disposition", "attachment; filename=" + HttpUtility.UrlEncode(fileName, System.Text.Encoding.UTF8));
-            
-            // 添加文件大小头
-            FileInfo fileInfoObj = new FileInfo(filePath);
-            Response.AppendHeader("Content-Length", fileInfoObj.Length.ToString());
-            
-            // 禁用缓存
-            Response.Cache.SetCacheability(HttpCacheability.NoCache);
-            Response.Cache.SetNoStore();
-            
-            // 传输文件
-            Response.TransmitFile(filePath);
-            
-            LogHelper.Log("文件传输完成: " + fileName);
-            
-            // 结束响应
-            Response.Flush();
-            Response.End();
-        }
-        catch (ThreadAbortException)
-        {
-            // Response.End() 会抛出这个异常，这是正常的
-            LogHelper.Log("文件下载完成（正常结束）: " + fileName);
-        }
-        catch (Exception ex)
-        {
-            LogHelper.Log("文件传输错误: " + ex.Message + " - 文件: " + fileName);
-        }
-    }
-
-    // 原有的其他方法保持不变
+    // 模式切换方法
     protected void btnPersonalMode_Click(object sender, EventArgs e)
     {
         ShowPersonalMode();
@@ -189,6 +44,7 @@ public partial class Download : Page
         ClearAllMessages();
     }
 
+    // 个人云盘相关方法
     protected void btnAccess_Click(object sender, EventArgs e)
     {
         string folderName = txtFolderName.Text.Trim();
@@ -232,15 +88,30 @@ public partial class Download : Page
 
     protected void rptPersonalFiles_ItemCommand(object source, RepeaterCommandEventArgs e)
     {
-        // 删除操作保持不变
-        if (e.CommandName == "Delete")
-        {
-            string folderName = txtFolderName.Text.Trim();
-            string password = txtPassword.Text;
-            string[] fileInfo = e.CommandArgument.ToString().Split('|');
-            string encryptedFileName = fileInfo[0];
-            string originalFileName = fileInfo[1];
+        string folderName = txtFolderName.Text.Trim();
+        string password = txtPassword.Text;
+        string[] fileInfo = e.CommandArgument.ToString().Split('|');
+        string encryptedFileName = fileInfo[0];
+        string originalFileName = fileInfo[1];
 
+        if (e.CommandName == "Download")
+        {
+            var result = FileManager.PrepareFileDownload(folderName, password, encryptedFileName, originalFileName);
+            
+            if (result.Success)
+            {
+                Response.ContentType = "application/octet-stream";
+                Response.AppendHeader("Content-Disposition", "attachment; filename=" + HttpUtility.UrlEncode(originalFileName));
+                Response.TransmitFile(result.TempFilePath);
+                Response.End();
+            }
+            else
+            {
+                ShowMessage("下载失败: " + result.Message, false);
+            }
+        }
+        else if (e.CommandName == "Delete")
+        {
             var result = FileManager.DeleteFile(folderName, password, encryptedFileName, originalFileName);
             
             ShowMessage(result.Message, result.Success);
@@ -263,6 +134,7 @@ public partial class Download : Page
         }
     }
 
+    // 群云盘相关方法
     protected void btnAccessGroup_Click(object sender, EventArgs e)
     {
         string groupName = txtGroupName.Text.Trim();
@@ -279,6 +151,7 @@ public partial class Download : Page
             rptGroupFiles.DataSource = result.Files;
             rptGroupFiles.DataBind();
             
+            // 显示文件数量信息
             if (result.Files != null && result.Files.Count > 0)
             {
                 ShowMessage(string.Format("成功访问群组，共 {0} 个文件", result.Files.Count), true);
@@ -288,6 +161,38 @@ public partial class Download : Page
         {
             pnlGroupFolderActions.Visible = false;
             pnlGroupFileList.Visible = false;
+        }
+    }
+
+    protected void btnDownloadAllGroup_Click(object sender, EventArgs e)
+    {
+        string groupName = txtGroupName.Text.Trim();
+        string adminPassword = txtGroupAdminPassword.Text;
+        
+        // 显示处理中提示
+        ShowMessage("正在准备打包下载，请稍候...", true);
+        
+        // 执行打包下载
+        var result = GroupFileManager.PrepareGroupAllFilesDownload(groupName, adminPassword);
+        
+        if (result.Success)
+        {
+            try
+            {
+                string zipFileName = string.Format("{0}_{1:yyyyMMdd_HHmmss}.zip", groupName, DateTime.Now);
+                Response.ContentType = "application/zip";
+                Response.AppendHeader("Content-Disposition", string.Format("attachment; filename={0}", HttpUtility.UrlEncode(zipFileName)));
+                Response.TransmitFile(result.TempFilePath);
+                Response.End();
+            }
+            catch (Exception ex)
+            {
+                ShowMessage("下载过程出错: " + ex.Message, false);
+            }
+        }
+        else
+        {
+            ShowMessage("打包下载失败: " + result.Message, false);
         }
     }
 
@@ -311,21 +216,37 @@ public partial class Download : Page
 
     protected void rptGroupFiles_ItemCommand(object source, RepeaterCommandEventArgs e)
     {
-        // 删除操作保持不变
-        if (e.CommandName == "Delete")
-        {
-            string groupName = txtGroupName.Text.Trim();
-            string adminPassword = txtGroupAdminPassword.Text;
-            string[] fileInfo = e.CommandArgument.ToString().Split('|');
-            string encryptedFileName = fileInfo[0];
-            string originalFileName = fileInfo[1];
+        string groupName = txtGroupName.Text.Trim();
+        string adminPassword = txtGroupAdminPassword.Text;
+        string[] fileInfo = e.CommandArgument.ToString().Split('|');
+        string encryptedFileName = fileInfo[0];
+        string originalFileName = fileInfo[1];
 
+        if (e.CommandName == "Download")
+        {
+            var result = GroupFileManager.PrepareGroupFileDownload(groupName, adminPassword, encryptedFileName, originalFileName);
+            
+            if (result.Success)
+            {
+                Response.ContentType = "application/octet-stream";
+                Response.AppendHeader("Content-Disposition", "attachment; filename=" + HttpUtility.UrlEncode(originalFileName));
+                Response.TransmitFile(result.TempFilePath);
+                Response.End();
+            }
+            else
+            {
+                ShowMessage("下载失败: " + result.Message, false);
+            }
+        }
+        else if (e.CommandName == "Delete")
+        {
             var result = GroupFileManager.DeleteGroupFile(groupName, adminPassword, encryptedFileName, originalFileName);
             
             ShowMessage(result.Message, result.Success);
             
             if (result.Success)
             {
+                // 刷新文件列表
                 var fileListResult = GroupFileManager.GetGroupFileList(groupName, adminPassword);
                 if (fileListResult.Success)
                 {
@@ -346,6 +267,7 @@ public partial class Download : Page
         }
     }
 
+    // 辅助方法
     private void ShowMessage(string message, bool isSuccess)
     {
         lblMessage.Visible = true;
